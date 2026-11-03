@@ -142,12 +142,23 @@ table td.calc{border-radius:0}
 input,select,textarea{border-width:1.5px}
 input:focus,select:focus,textarea:focus{border-color:var(--gold)}
 .demobar{align-items:center;gap:10px;flex-wrap:wrap}.demobar a.btn{text-decoration:none;display:inline-flex;align-items:center}
+
+/* subtle reuse of the hero gradient */
+.herobar{background:linear-gradient(135deg,#1B2150,#2E3A87 75%,#4A55A8)!important;color:#F6F1E7;border:0}.herobar b{color:#fff}
+.calsum{background:linear-gradient(135deg,#1B2150,#2E3A87 75%,#4A55A8);color:#F6F1E7;border-radius:14px;padding:10px 18px}.calsum small{color:#C9D3E6!important}.calsum b{color:#fff}
+@media print{.herobar,.calsum{background:#fff!important;color:#000!important;border:1px solid #999!important}.herobar b,.calsum b,.calsum small{color:#000!important}}
+
+:root[data-theme="dark"] .herobar,:root[data-theme="dark"] .calsum{border:1.5px solid #8F95D8!important;box-shadow:0 0 0 1px rgba(143,149,216,.18)}
+:root[data-theme="dark"] .kpi.hero{border:1.5px solid #8F95D8!important}
+
+.optrow td{background:var(--soft);padding:10px 14px;border-radius:12px}.optbox .chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600}.optbox .chk small{display:block;font-weight:400;color:var(--mute);margin-top:2px}.optbox input[type=checkbox]{width:20px;height:20px;margin-top:2px;accent-color:#6E6BC8}.optb{font-size:12.5px!important;padding:6px 10px!important}
 </style></head><body><div class="app" id="app"></div><noscript>This app needs JavaScript. Open it in a modern browser (Chrome, Safari, Edge or Firefox).</noscript><script>// Flight to Freedom engine (pure functions) — mirrors the spreadsheet rules
 const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
 function orderDebts(debts, strategy) {
   const d = debts.map((x, i) => ({ ...x, idx: i }));
-  if (strategy === 'Avalanche') d.sort((a, b) => b.apr - a.apr || a.bal - b.bal || a.idx - b.idx);
-  else d.sort((a, b) => a.bal - b.bal || b.apr - a.apr || a.idx - b.idx);
+  const ex = (a, b) => (a.excl ? 1 : 0) - (b.excl ? 1 : 0);
+  if (strategy === 'Avalanche') d.sort((a, b) => ex(a, b) || b.apr - a.apr || a.bal - b.bal || a.idx - b.idx);
+  else d.sort((a, b) => ex(a, b) || a.bal - b.bal || b.apr - a.apr || a.idx - b.idx);
   return d;
 }
 // debts: [{name,bal,apr,min}] valid ones only. lumps: [{month(1..240), amount, target:name|''}]
@@ -159,7 +170,7 @@ function simulate(debts, budget, strategy, lumps = [], maxM = 240) {
   const total0 = bal.reduce((a, b) => a + b, 0);
   if (total0 <= 0.005) return { ord, rows, months: 0, done: true, totInt: 0, totPaid: 0, payoff, intPer, total0 };
   for (let m = 1; m <= maxM; m++) {
-    const int = bal.map((b, i) => (b > 0 ? r2(b * ord[i].apr / 12) : 0));
+    const int = bal.map((b, i) => (b > 0 ? r2(b * ((ord[i].promoM >= m && ord[i].promoApr >= 0) ? ord[i].promoApr : ord[i].apr) / 12) : 0));
     for (let i = 0; i < bal.length; i++) bal[i] = r2(bal[i] + int[i]);
     let follow = 0; const paid = bal.map(() => 0);
     for (const l of lumps) {
@@ -199,6 +210,21 @@ var THEME_KEY='unlock-freedom-theme';
 function getTheme(){try{var t=localStorage.getItem(THEME_KEY);if(t==='light'||t==='dark') return t}catch(e){}return 'light'}
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);var m=document.querySelector('meta[name=theme-color]');if(m) m.setAttribute('content',t==='dark'?'#0A1029':'#1B2150')}
 function setTheme(t){try{localStorage.setItem(THEME_KEY,t)}catch(e){}applyTheme(t);render()}
+
+var SND_KEY='unlock-freedom-sound',AC=null;
+function soundOn(){try{return localStorage.getItem(SND_KEY)!=='off'}catch(e){return true}}
+function setSound(on){try{localStorage.setItem(SND_KEY,on?'on':'off')}catch(e){}if(on) snd('tick');render()}
+function acx(){try{if(!AC){var C=window.AudioContext||window.webkitAudioContext;if(!C) return null;AC=new C()}if(AC.state==='suspended') AC.resume();return AC}catch(e){return null}}
+function note(f,t0,dur,vol,type){var c=acx();if(!c) return;var o=c.createOscillator(),g=c.createGain(),lp=c.createBiquadFilter();o.type=type||'sine';o.frequency.value=f;lp.type='lowpass';lp.frequency.value=2400;var t=c.currentTime+t0;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.008);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(lp);lp.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur+0.05)}
+function snd(k){if(!soundOn()) return;if(k==='tick'){note(740,0,0.07,0.028,'sine');note(1480,0,0.04,0.008,'sine')}
+ else if(k==='ok'){note(659,0,0.22,0.04);note(988,0.09,0.3,0.035)}
+ else if(k==='win'){[523,659,784,1047].forEach(function(f,i){note(f,i*0.1,0.7,0.05);note(f*2,i*0.1,0.4,0.012)})}
+ else if(k==='m10'){[784,1047].forEach(function(f,i){note(f,i*0.14,0.5,0.045);note(f*2,i*0.14,0.3,0.01)})}
+ else if(k==='m25'){[523,659,784].forEach(function(f,i){note(f,i*0.13,0.6,0.05);note(f*2,i*0.13,0.35,0.012)})}
+ else if(k==='m50'){[392,523,659,784,1047].forEach(function(f,i){note(f,i*0.11,0.8,0.05);note(f*2,i*0.11,0.45,0.013)});note(262,0,1.4,0.03,'triangle')}
+ else if(k==='m75'){[523,587,659,784,880,1047,1319].forEach(function(f,i){note(f,i*0.09,0.7,0.045);note(f*2,i*0.09,0.4,0.012)});note(330,0,1.5,0.03,'triangle')}
+ else if(k==='full'){note(262,0,2.6,0.035,'triangle');note(330,0.05,2.5,0.03,'triangle');note(392,0.1,2.4,0.03,'triangle');[523,659,784,1047,1319,1568,2093].forEach(function(f,i){note(f,0.15+i*0.11,1.1,0.05);note(f*2,0.15+i*0.11,0.5,0.012)});[2093,2637,3136].forEach(function(f,i){note(f,1.0+i*0.08,0.6,0.014)})}}
+document.addEventListener('click',function(e){if(!soundOn()) return;var b=e.target.closest&&e.target.closest('button,summary,select,.tab,a.btn');if(!b) return;acx();var tx=(b.textContent||'');if(/Mark paid|paid off/i.test(tx)) return;snd('tick')},true);
 function cv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
 applyTheme(getTheme());
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -217,18 +243,18 @@ function todayYM(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 var S=null, memOnly=false, tab='start', cache=null;
 
-function blank(){return {app:'flight-to-freedom',v:1,cur:'$',start:todayYM(),extra:0,strategy:'Snowball',debts:[mk(),mk(),mk()],custom:75,target:'',lumps:[ml(),ml(),ml(),ml(),ml(),ml()],log:[],checks:{},cleared:{},seen:[],sample:false,lastBackup:null}}
-function mk(n,b,a,m,due){return {name:n||'',bal:b==null?'':b,apr:a==null?'':a,min:m==null?'':m,due:due==null?'':due}}
+function blank(){return {app:'flight-to-freedom',v:1,cur:'$',start:todayYM(),extra:0,strategy:'Snowball',debts:[mk(),mk(),mk()],custom:75,target:'',lumps:[ml(),ml(),ml(),ml(),ml(),ml()],log:[],checks:{},cleared:{},seen:[],sample:false,lastBackup:null,income:'',fixed:''}}
+function mk(n,b,a,m,due,x,pa,pe){return {name:n||'',bal:b==null?'':b,apr:a==null?'':a,min:m==null?'':m,due:due==null?'':due,excl:!!x,promoApr:pa==null?'':pa,promoEnd:pe||''}}
 function ml(){return {month:'',amount:'',target:''}}
 function load(){try{var t=localStorage.getItem(KEY);if(t){var o=JSON.parse(t);var s=sanitize(o);if(s) return s}}catch(e){memOnly=true}
  return blank()}
 function save(){cache=null;try{localStorage.setItem(KEY,JSON.stringify(S));memOnly=false}catch(e){memOnly=true}}
 function sanitize(o){if(!o||o.app!=='flight-to-freedom') return null;var b=blank();
  var s={app:b.app,v:1,cur:['$','€','£','CHF','kr',''].indexOf(o.cur)>=0?o.cur:'$',start:/^\d{4}-\d{2}$/.test(o.start)?o.start:b.start,extra:(o.extra===''||o.extra==null)?'':num(o.extra),strategy:o.strategy==='Avalanche'?'Avalanche':'Snowball',
-  debts:[],custom:(o.custom===''||o.custom==null)?'':num(o.custom),target:/^\d{4}-\d{2}$/.test(o.target)?o.target:'',lumps:[],log:[],checks:{},sample:!!o.sample,lastBackup:o.lastBackup||null,cleared:{},seen:[]};
+  debts:[],custom:(o.custom===''||o.custom==null)?'':num(o.custom),target:/^\d{4}-\d{2}$/.test(o.target)?o.target:'',lumps:[],log:[],checks:{},sample:!!o.sample,lastBackup:o.lastBackup||null,cleared:{},seen:[],income:(o.income===''||o.income==null)?'':num(o.income),fixed:(o.fixed===''||o.fixed==null)?'':num(o.fixed)};
  if(o.cleared&&typeof o.cleared==='object') Object.keys(o.cleared).slice(0,20).forEach(function(k){if(/^\d{4}-\d{2}-\d{2}$/.test(o.cleared[k])) s.cleared[String(k).slice(0,40)]=o.cleared[k]});
  if(Array.isArray(o.seen)) s.seen=o.seen.filter(function(x){return [10,25,50,75,100].indexOf(x)>=0});
- (o.debts||[]).slice(0,8).forEach(function(d){s.debts.push(mk(String(d.name||'').slice(0,40),d.bal,d.apr,d.min,(+d.due>=1&&+d.due<=28)?Math.round(+d.due):''))});
+ (o.debts||[]).slice(0,20).forEach(function(d){s.debts.push(mk(String(d.name||'').slice(0,40),d.bal,d.apr,d.min,(+d.due>=1&&+d.due<=28)?Math.round(+d.due):'',!!d.excl,(d.promoApr===''||d.promoApr==null)?'':num(d.promoApr),/^\d{4}-\d{2}$/.test(d.promoEnd)?d.promoEnd:''))});
  while(s.debts.length<3) s.debts.push(mk());
  (o.lumps||[]).slice(0,6).forEach(function(l){s.lumps.push({month:/^\d{4}-\d{2}$/.test(l.month)?l.month:'',amount:l.amount===''?'':num(l.amount),target:String(l.target||'')})});
  while(s.lumps.length<6) s.lumps.push(ml());
@@ -242,6 +268,9 @@ function money(x,d){if(x==null||x===''||!isFinite(x)) return '–';d=d==null?0:d
 function dur(m){var y=Math.floor(m/12),r=m%12;return (y?y+' yr'+(y>1?'s':'')+' ':'')+(r||!y?r+' mo':'')}
 
 /* ---------- calculations ---------- */
+function listItem(r,d){var it={name:r.nm,bal:r.b,apr:r.a/100,min:r.m,due:isNum(d.due)?num(d.due):0,excl:!!d.excl};
+ if(isNum(d.promoApr)&&num(d.promoApr)>=0&&num(d.promoApr)<=100&&/^\d{4}-\d{2}$/.test(d.promoEnd||'')){var pm=idx(d.promoEnd)-idx(S.start)+1;if(isFinite(pm)&&pm>=1){it.promoApr=num(d.promoApr)/100;it.promoM=pm}}
+ return it}
 function debtStatus(){var list=[],issues=[],names={},any=false,bad=false;
  S.debts.forEach(function(d,i){var empty=!d.name&&d.bal===''&&d.apr===''&&d.min==='';var r={i:i,status:'',ok:false};
   if(empty){issues.push(r);return}any=true;
@@ -256,7 +285,7 @@ function debtStatus(){var list=[],issues=[],names={},any=false,bad=false;
   if(r.status==='OK'){if(names[nm.toLowerCase()]){r.status='Duplicate name: use a unique name.';names[nm.toLowerCase()].dup=true}else names[nm.toLowerCase()]=r}
   r.nm=nm;r.b=b;r.a=a;r.m=m;issues.push(r)});
  issues.forEach(function(r){if(r.status==='OK'&&names[r.nm.toLowerCase()]&&names[r.nm.toLowerCase()].dup&&names[r.nm.toLowerCase()]===r){r.status='Duplicate name: use a unique name.'}});
- issues.forEach(function(r){if(r.status==='OK') list.push({name:r.nm,bal:r.b,apr:r.a/100,min:r.m,due:isNum(S.debts[r.i].due)?num(S.debts[r.i].due):0}); else if(r.status&&r.status.indexOf('row ignored')<0) bad=true});
+ issues.forEach(function(r){if(r.status==='OK') list.push(listItem(r,S.debts[r.i])); else if(r.status&&r.status.indexOf('row ignored')<0) bad=true});
  var ex=isNum(S.extra)?num(S.extra):0; if(S.extra!==''&&S.extra!=null&&(!isNum(S.extra)||num(S.extra)<0||num(S.extra)>1e7)){bad=true;ex=0}
  var st=!isFinite(idx(S.start))?2:bad?2:list.length?1:0;
  return {rows:issues,list:list,extra:ex,status:st,minTotal:list.reduce(function(a,d){return a+d.min},0)}}
@@ -280,6 +309,8 @@ function lumpList(){var c=calc();var out=[];S.lumps.forEach(function(l,i){var ch
 /* ---------- ui helpers ---------- */
 function undoToast(t,fn){var e=h('div',{class:'toast'},t+' ',h('button',{class:'tundo',onclick:function(){e.remove();fn()}},'Undo'));document.body.appendChild(e);setTimeout(function(){e.remove()},6000)}
 function toast(t){var e=h('div',{class:'toast'},t);document.body.appendChild(e);setTimeout(function(){e.remove()},1800)}
+function askExtra(name){var amt=inp('number','',function(){},{min:0,placeholder:'0.00','aria-label':'Extra payment amount'});var m=h('div',{class:'modal'},h('div',{class:'box'},h('h2',{style:'font-size:22px;margin-bottom:8px'},'Extra payment'),h('p',{},'Add a one-time extra payment to '+name+'. It goes in your Payment log as "Extra" with today\'s date.'),field('Amount ('+(S.cur||'')+')',amt),
+ h('div',{class:'row',style:'justify-content:flex-end;margin-top:16px'},h('button',{class:'btn ghost',onclick:function(){m.remove()}},'Cancel'),h('button',{class:'btn coral',onclick:function(){var v=num(amt.value);if(!(v>0)){toast('Enter an amount');return}S.log.push({id:'x'+Date.now()+Math.random().toString(36).slice(2,5),date:todayISO(),debt:name,amt:Math.round(v*100)/100,type:'Extra',notes:''});save();m.remove();snd('ok');toast('Extra payment logged');render()}},'Add payment'))));document.body.appendChild(m);setTimeout(function(){amt.focus()},50)}
 function confirmBox(title,msg,yes,fn){var m=h('div',{class:'modal'},h('div',{class:'box'},h('h2',{style:'font-size:22px;margin-bottom:8px'},title),h('p',{},msg),
  h('div',{class:'row',style:'justify-content:flex-end;margin-top:16px'},h('button',{class:'btn ghost',onclick:function(){m.remove()}},'Cancel'),h('button',{class:'btn coral',onclick:function(){m.remove();fn()}},yes))));document.body.appendChild(m)}
 function field(label,input,small){return h('div',{class:'field'},h('label',{},label),input,small?h('small',{},small):null)}
@@ -328,6 +359,7 @@ function shell(){var app=$('#app');app.innerHTML='';
  var nav=h('nav',{class:'side'},h('div',{class:'brand'},logo(),h('div',{},h('b',{},'Unlock Freedom'),h('small',{},'Debt payoff app'))));
  TABS.forEach(function(t){nav.appendChild(h('button',{class:'tab'+(tab===t[0]?' on':''),onclick:function(){go(t[0])}},h('i',{},t[1]),t[2].replace('&amp;','&')))});
  var dk=getTheme()==='dark';nav.appendChild(h('button',{class:'tab themebtn',title:'Switch theme',onclick:function(){setTheme(dk?'light':'dark')}},h('i',{},dk?'☀':'☾'),dk?'Light mode':'Dark mode'));
+nav.appendChild(h('button',{class:'tab themebtn',title:'Sound on or off',onclick:function(){setSound(!soundOn())}},h('i',{},'♪'),soundOn()?'Sound on':'Sound off'));
  nav.appendChild(h('div',{class:'sidefoot'},'Your data stays on this device.'));
  var main=h('main',{});app.appendChild(nav);app.appendChild(main);return main}
 function logo(){return h('span',{html:'<svg width="44" height="44" viewBox="0 0 44 44"><defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E3A87"/><stop offset="1" stop-color="#1B2150"/></linearGradient></defs><rect width="44" height="44" rx="11" fill="url(#lg)"/><path d="M10 29a12 12 0 0 1 24 0z" fill="#F8C9A8"/><rect x="8" y="31.5" width="28" height="2.6" rx="1.3" fill="#8E93CF"/></svg>'})}
@@ -361,30 +393,42 @@ function vStart(m){var ic=installCard();if(ic) m.appendChild(ic);
  m.appendChild(h('p',{class:'hint',style:'text-align:center;color:var(--mute);font-size:13px'},'Unlock Freedom is a planning tool, not financial advice.'))}
 
 /* ---------- DEBTS ---------- */
+var openOpts=[];
 function vDebts(m){
- m.appendChild(head('My debts','Step 1 · Fill the peach fields (✎). Grey cells calculate automatically. Up to 8 debts. Due day (optional) feeds your Calendar.'));
+ m.appendChild(head('My debts','Step 1 · Fill the peach fields (✎). Grey cells calculate automatically. Up to 20 debts. Due day (optional) feeds your Calendar.'));
  m.appendChild(legend());
  var settings=h('div',{class:'card'},h('div',{class:'grid g3'},
   field('Plan start month',inp('month',S.start,function(e){S.start=e.target.value;save();live()}),'First month of your plan.'),
   field('Extra payment per month ('+(S.cur||'')+')',inp('number',S.extra,function(e){S.extra=e.target.value;save();live()},{min:0,placeholder:'0'}),'On top of all minimum payments (0 if none).'),
   field('Strategy',h('div',{},h('div',{class:'seg',id:'seg'},['Snowball','Avalanche'].map(function(s){return h('button',{class:S.strategy===s?'on':'',onclick:function(){S.strategy=s;save();render()}},s)}))),'Snowball = smallest balance first · Avalanche = highest rate first')));
  m.appendChild(settings);
- var card=h('div',{class:'card'},h('h2',{},'Your debts'),h('p',{class:'hint',id:'budgetline'},''));
+ var card=h('div',{class:'card'},h('h2',{},'Your debts'),h('p',{class:'hint',id:'budgetline'},''),h('p',{class:'hint'},'Paid every 2 weeks? Enter the monthly total: your payment × 26 ÷ 12.'));
  var tb=h('tbody',{});
- S.debts.forEach(function(d,i){var tr=h('tr',{},
+ S.debts.forEach(function(d,i){var hasOpt=d.excl||(isNum(d.promoApr)&&d.promoEnd);var tr=h('tr',{},
   h('td',{'data-label':'Debt name',style:'min-width:150px'},inp('text',d.name,function(e){d.name=e.target.value;save();live()},{placeholder:'e.g. Credit Card',maxlength:40,'aria-label':'Debt name'})),
   h('td',{'data-label':'Balance',style:'min-width:110px'},inp('number',d.bal,function(e){d.bal=e.target.value;save();live()},{min:0,placeholder:'0.00','aria-label':'Balance'})),
   h('td',{'data-label':'APR %',style:'min-width:90px'},inp('number',d.apr,function(e){d.apr=e.target.value;save();live()},{min:0,max:100,placeholder:'0.0','aria-label':'APR percent'})),
   h('td',{'data-label':'Min. payment',style:'min-width:110px'},inp('number',d.min,function(e){d.min=e.target.value;save();live()},{min:0,placeholder:'0.00','aria-label':'Minimum payment'})),
   h('td',{'data-label':'Due day',style:'min-width:80px'},inp('number',d.due,function(e){var v=parseInt(e.target.value,10);d.due=(v>=1&&v<=28)?v:'';save()},{min:1,max:28,placeholder:'1-28','aria-label':'Due day of the month'})),
   h('td',{class:'calc',id:'chk'+i,'data-label':'Check',style:'min-width:150px;font-size:13.5px'}),h('td',{id:'ord'+i,class:'n calc','data-label':'Order'}),
-  h('td',{},h('button',{class:'btn del',title:'Remove this debt',onclick:function(){var rm=S.debts.splice(i,1)[0];if(S.debts.length<3)S.debts.push(mk());save();render();undoToast('Debt removed',function(){var j=S.debts.findIndex(function(x){return !x.name&&x.bal===''&&x.apr===''&&x.min===''});if(j>=0)S.debts.splice(j,1);S.debts.splice(Math.min(i,S.debts.length),0,rm);if(S.debts.length>8)S.debts.length=8;save();render()})}},'✕')));tb.appendChild(tr)});
+  h('td',{style:'white-space:nowrap'},h('button',{class:'btn small ghost optb',title:'More options for this debt',onclick:function(){var k=openOpts.indexOf(d);if(k>=0) openOpts.splice(k,1);else openOpts.push(d);render()}},'Options'+(hasOpt?' •':'')),' ',h('button',{class:'btn del',title:'Remove this debt',onclick:function(){var rm=S.debts.splice(i,1)[0];if(S.debts.length<3)S.debts.push(mk());save();render();undoToast('Debt removed',function(){var j=S.debts.findIndex(function(x){return !x.name&&x.bal===''&&x.apr===''&&x.min===''});if(j>=0)S.debts.splice(j,1);S.debts.splice(Math.min(i,S.debts.length),0,rm);if(S.debts.length>20)S.debts.length=20;save();render()})}},'✕')));tb.appendChild(tr);
+  if(openOpts.indexOf(d)>=0) tb.appendChild(h('tr',{class:'optrow'},h('td',{colspan:8},h('div',{class:'optbox'},
+   h('label',{class:'chk'},h('input',{type:'checkbox',checked:d.excl,onchange:function(e){d.excl=e.target.checked;save();render()}}),' Pay the minimum only until my other debts are cleared ',h('small',{},'Skips Snowball/Avalanche for this debt. Handy for 0% loans.')),
+   h('div',{class:'grid g3',style:'margin-top:8px'},field('Promo APR % (optional)',inp('number',d.promoApr,function(e){d.promoApr=e.target.value;save();live()},{min:0,max:100,placeholder:'0'}),'e.g. 0% balance transfer'),field('Promo rate lasts until',inp('month',d.promoEnd,function(e){d.promoEnd=e.target.value;save();live()}),'Last month at the promo rate. Your normal APR applies after.'))))))});
  card.appendChild(h('div',{class:'scroll'},h('table',{class:'stack'},h('thead',{},h('tr',{},h('th',{},'Debt name'),h('th',{class:'n'},'Balance'),h('th',{class:'n'},'APR %'),h('th',{class:'n'},'Min. payment'),h('th',{class:'n'},'Due day'),h('th',{},'Check',h('span',{class:'autotag'},'AUTO')),h('th',{class:'n'},'Order',h('span',{class:'autotag'},'AUTO')),h('th',{}))),tb)));
- card.appendChild(h('div',{class:'row',style:'margin-top:12px'},h('button',{class:'btn ghost small',onclick:function(){if(S.debts.length>=8){toast('Maximum 8 debts');return}S.debts.push(mk());save();render()}},'+ Add a debt'),h('button',{class:'btn ghost small',onclick:function(){go('dash')}},'See my dashboard →')));
+ card.appendChild(h('div',{class:'row',style:'margin-top:12px'},h('button',{class:'btn ghost small',onclick:function(){if(S.debts.length>=20){toast('Maximum 20 debts');return}S.debts.push(mk());save();render()}},'+ Add a debt'),h('button',{class:'btn ghost small',onclick:function(){go('dash')}},'See my dashboard →')));
  m.appendChild(card);
+ m.appendChild(h('div',{class:'card'},h('h2',{},'Your month (optional)'),h('p',{class:'hint'},'Add your income and fixed costs (rent, bills, subscriptions…) to check that your debt budget is realistic. This stays on your device.'),h('div',{class:'grid g3'},field('Monthly income, after tax ('+(S.cur||'')+')',inp('number',S.income,function(e){S.income=e.target.value;save();live()},{min:0,placeholder:'0'})),field('Fixed costs: rent, bills… ('+(S.cur||'')+')',inp('number',S.fixed,function(e){S.fixed=e.target.value;save();live()},{min:0,placeholder:'0'})),h('div',{class:'field'},h('label',{},'Reality check',h('span',{class:'autotag'},'AUTO')),h('div',{class:'calc',id:'incline',style:'padding:10px 12px;border-radius:12px;min-height:44px;font-size:13.5px'},'')))));
  m.appendChild(h('div',{id:'livebox'}));
  live()}
-function live(){var c=calc();var D=c.D;var bl=$('#budgetline');
+function incLine(c){var el=$('#incline');if(!el) return;var inc=isNum(S.income)?num(S.income):0,fx=isNum(S.fixed)?num(S.fixed):0;
+ if(!(inc>0)){el.textContent='Enter your income to see this.';return}
+ var av=fx>0?inc-fx:inc,t=fx>0?'After fixed costs you have '+money(av)+' a month. ':'';
+ if(!c.ok){el.textContent=t||'Add your debts to see how much of your income goes to them.';return}
+ if(av<=0){el.textContent=t+'Your fixed costs are above your income.';return}
+ var pc=Math.round(c.budget/av*100);
+ el.textContent=t+'Your debt budget ('+money(c.budget)+') is '+pc+'% of '+(fx>0?'that':'your income')+(c.budget>av?': more than what is left. Check your numbers.':'. '+money(av-c.budget)+' left for everything else.')}
+function live(){var c=calc();var D=c.D;var bl=$('#budgetline');incLine(c);
  var order={};if(D.status!==0){var o=orderDebts(D.list,S.strategy);o.forEach(function(d,k){order[d.name]=k+1})}
  S.debts.forEach(function(d,i){var r=D.rows[i],cell=$('#chk'+i),oc=$('#ord'+i);if(!cell) return;
   if(!r||!r.status){cell.textContent='';oc.textContent='';return}
@@ -428,7 +472,7 @@ function vDash(m){
   h('p',{style:'margin-top:12px'},best?h('span',{},h('b',{},best),' costs '+money(diff)+' less interest. '):'Both cost the same here. ',S.strategy!==(best||S.strategy)?h('button',{class:'btn small ghost',onclick:function(){S.strategy=best;save();render()}},'Switch to '+best):h('span',{class:'ok'},'✓ Your plan uses '+S.strategy+'.'))));
  // order cards
  var nowI0=(idx(todayYM())-c.sIdx);var cards=h('div',{class:'debtcards'});p.ord.forEach(function(d,k){var cd=S.cleared[d.name];var op=!!cd||(nowI0>=0&&p.payoff[k]&&nowI0>=p.payoff[k]);cards.appendChild(h('div',{class:'dcard'+(op?' open':'')},(op?h('span',{class:'chip g lk'},cd?'Cleared '+fd(cd):'Cleared'):null),h('div',{class:'p'},'PRIORITY #'+(k+1)),h('h3',{},d.name),h('dl',{},h('dt',{},'Balance'),h('dd',{},money(d.bal)),h('dt',{},'APR'),h('dd',{},(d.apr*100).toFixed(2).replace(/\.?0+$/,'')+'%'),h('dt',{},'Minimum'),h('dd',{},money(d.min)),h('dt',{},'Final payment'),h('dd',{class:'ok'},p.payoff[k]?lab(c.sIdx+p.payoff[k]-1):'> 20 yrs'),h('dt',{},'Interest'),h('dd',{},money(p.intPer[k]))),
-  cd?h('button',{class:'btn small ghost',style:'margin-top:10px',onclick:function(){delete S.cleared[d.name];save();render()}},'Undo'):h('button',{class:'btn small coral',style:'margin-top:10px',onclick:function(){markCleared(c,p,k)}},'Mark as paid off')))});
+  cd?h('button',{class:'btn small ghost',style:'margin-top:10px',onclick:function(){delete S.cleared[d.name];save();render()}},'Undo'):h('button',{class:'btn small coral',style:'margin-top:10px',onclick:function(){markCleared(c,p,k)}},'Mark as paid off'),h('button',{class:'btn small ghost',style:'margin-top:10px;margin-left:6px',onclick:function(){askExtra(d.name)}},'+ Extra payment')))});
  m.appendChild(h('div',{class:'card'},h('h2',{},'Payoff order'),h('p',{class:'hint'},'Each cleared debt frees its payment for the next one. Paid one off? Mark it and celebrate.'),cards))}
 
 /* ---------- victories ---------- */
@@ -437,7 +481,7 @@ function confetti(box){if(window.matchMedia&&matchMedia('(prefers-reduced-motion
  for(var i=0;i<30;i++){var s=document.createElement('span');s.className='cf';
   s.style.cssText='left:'+(5+Math.random()*90)+'%;background:'+cols[i%cols.length]+';animation-delay:'+(Math.random()*.5).toFixed(2)+'s;animation-duration:'+(1.6+Math.random()*1.2).toFixed(2)+'s;transform:rotate('+Math.round(Math.random()*180)+'deg);'+(i%3?'':'border-radius:50%');
   box.appendChild(s)}}
-function celebrate(title,msg,sub){var m=h('div',{class:'modal vic'},h('div',{class:'box vbox'},
+function celebrate(title,msg,sub,sk){snd(sk||'win');var m=h('div',{class:'modal vic'},h('div',{class:'box vbox'},
   h('div',{class:'cfwrap'}),
   h('div',{html:'<svg viewBox="0 0 80 80" width="76" height="76" aria-hidden="true"><circle class="vc" cx="40" cy="40" r="34" fill="none" stroke="'+cv('--gold')+'" stroke-width="5"/><path class="vk" d="M24 41 L35 52 L57 29" fill="none" stroke="'+cv('--accentt')+'" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>'}),
   h('h2',{class:'pop-in',style:'font-size:26px;margin:10px 0 6px'},title),h('p',{style:'margin:0 0 6px;font-size:16px'},msg),sub?h('p',{class:'hint'},sub):null,
@@ -447,10 +491,10 @@ function markCleared(c,p,k){var d=p.ord[k];S.cleared[d.name]=todayISO();save();
  var left=p.ord.filter(function(x){return !S.cleared[x.name]});
  var next=left[0];
  render();
- if(!next) celebrate('Debt-free!','Every debt on your list is paid off. You did it.','Take a moment. This is the result of every single payment.');
+ if(!next) celebrate('Debt-free!','Every debt on your list is paid off. You did it.','Take a moment. This is the result of every single payment.','full');
  else celebrate(d.name+' is paid off','One debt cleared, '+left.length+' to go.',money(d.min)+' a month is now free and rolls into '+next.name+'. Your plan already counts on it.')}
 function checkMilestone(pr){var hit=null;MILES.forEach(function(x){if(pr>=x&&S.seen.indexOf(x)<0){S.seen.push(x);hit=x}});
- if(hit!==null){save();setTimeout(function(){celebrate(hit===100?'Debt-free!':hit+'% cleared',milestoneMsg(hit),'Based on your payments so far.')},350)}}
+ if(hit!==null){save();setTimeout(function(){celebrate(hit===100?'Debt-free!':hit+'% cleared',milestoneMsg(hit),'Based on your payments so far.',hit===100?'full':'m'+hit)},350)}}
 
 /* ---------- progress from logged payments ---------- */
 function logProgress(c){var p=c.plan,k=0;
@@ -469,7 +513,7 @@ function thisMonthCard(c){var p=c.plan,first=c.sIdx,lastI=c.sIdx+p.rows.length-1
  pays.forEach(function(x){var done=loggedIn(x.name,v);if(!done) todo++;
   box.appendChild(h('div',{class:'trow'+(done?' done':'')},h('span',{class:'td'},x.day?'Day '+x.day:'Anytime'),h('b',{},x.name,x.last?h('span',{class:'chip g',style:'margin-left:8px'},'Final payment'):null),h('span',{class:'ta'},money(x.amt,2)),
    done?h('span',{class:'ok tdn'},'✓ Logged'):h('button',{class:'btn small ghost',onclick:function(){var dt=now===v?todayISO():ymOf(v)+'-'+String(Math.min(x.day||1,dim(Math.floor(v/12),((v%12)+12)%12))).padStart(2,'0');
-    S.log.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6),date:dt,debt:x.name,amt:Math.round(x.amt*100)/100,type:'Regular',notes:''});save();toast('Payment logged');render()}},'Mark paid')))});
+    S.log.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6),date:dt,debt:x.name,amt:Math.round(x.amt*100)/100,type:'Regular',notes:''});save();snd('ok');toast('Payment logged');render()}},'Mark paid')))});
  box.appendChild(h('p',{class:'hint',style:'margin:8px 0 0'},before?'Your first payments are due in '+lab(first)+'.':todo?todo+' left to pay this month.':'All paid this month. Well done.'));return box}
 
 /* ---------- guided setup ---------- */
@@ -488,7 +532,7 @@ function vSetup(m){
     field('Due day',inp('number',d.due,function(e){var v=parseInt(e.target.value,10);d.due=(v>=1&&v<=28)?v:'';save()},{min:1,max:28,placeholder:'1-28'}),'Optional')));
    if(S.debts.length>1) bx.appendChild(h('button',{class:'btn small ghost',style:'margin-top:8px',onclick:function(){S.debts.splice(i,1);if(S.debts.length<1)S.debts.push(mk());save();render()}},'Remove'));
    m.appendChild(bx)});
-  m.appendChild(h('div',{class:'row'},h('button',{class:'btn ghost',onclick:function(){if(S.debts.length>=8){toast('Maximum 8 debts');return}S.debts.push(mk());save();render()}},'+ Add another debt'),
+  m.appendChild(h('div',{class:'row'},h('button',{class:'btn ghost',onclick:function(){if(S.debts.length>=20){toast('Maximum 20 debts');return}S.debts.push(mk());save();render()}},'+ Add another debt'),
    h('button',{class:'btn coral',onclick:function(){cache=null;var D=debtStatus();if(!D.list.length||D.rows.some(function(r){return r.status&&r.status!=='OK'&&r.status.indexOf('ignored')<0})){var bad=D.rows.filter(function(r){return r.status&&r.status!=='OK'})[0];toast(bad?bad.status:'Add at least one debt');return}wz=2;render();window.scrollTo(0,0)}},'Next →')))}
  else if(wz===2){
   m.appendChild(h('p',{class:'sub'},'Anything you can add on top of the minimums speeds things up. Zero is fine: you can test amounts later in the Simulator.'));
@@ -496,6 +540,7 @@ function vSetup(m){
    field('Extra per month ('+(S.cur||'')+')',inp('number',S.extra,function(e){S.extra=e.target.value;save()},{min:0,placeholder:'0'}),'On top of all minimum payments.'),
    field('Plan start month',inp('month',S.start,function(e){S.start=e.target.value;save()}),'Usually this month.'),
    field('Strategy',h('div',{class:'seg'},['Snowball','Avalanche'].map(function(x){return h('button',{class:S.strategy===x?'on':'',onclick:function(){S.strategy=x;save();render()}},x)})),S.strategy==='Snowball'?'Smallest balance first: quick wins.':'Highest rate first: usually less interest.'))));
+  m.appendChild(h('div',{class:'card'},h('h2',{style:'font-size:20px'},'Optional: your income and fixed costs'),h('p',{class:'hint'},'Rent, bills, subscriptions… Add them to check your debt budget is realistic. You can skip this.'),h('div',{class:'grid g3'},field('Monthly income, after tax ('+(S.cur||'')+')',inp('number',S.income,function(e){S.income=e.target.value;save()},{min:0,placeholder:'0'})),field('Fixed costs ('+(S.cur||'')+')',inp('number',S.fixed,function(e){S.fixed=e.target.value;save()},{min:0,placeholder:'0'})))));
   m.appendChild(h('div',{class:'row'},h('button',{class:'btn ghost',onclick:function(){wz=1;render()}},'← Back'),h('button',{class:'btn coral',onclick:function(){cache=null;if(calc().ok){wz=3;render();window.scrollTo(0,0)}else toast('Check your debts and extra payment')}},'See my date →')))}
  else{
   cache=null;var c=calc();if(!c.ok){wz=1;render();return}var p=c.plan;
@@ -593,7 +638,7 @@ function vSim0(m){
  var c=calc();if(!c.ok){var w=warnPlan(c);if(w) m.appendChild(w);m.appendChild(empty());return}
  var D=c.D,base=c.budget,bp=c.plan;var lumps=lumpList();var lp=lumps.filter(function(l){return l.chk.ok}).map(function(l){return {month:l.month,amount:l.amount,target:l.target}});
  var cust=Math.max(0,num(S.custom));var headline=null;
- if(cust>0){var hr=simulate(D.list,base+cust,S.strategy,[]);if(hr.done&&bp.done) headline=h('div',{class:'note',style:'margin-bottom:12px'},h('b',{},'With '+money(cust)+' more per month: '),(bp.months-hr.months>0?(bp.months-hr.months)+' month'+(bp.months-hr.months>1?'s':'')+' sooner':'same date')+' and '+money(bp.totInt-hr.totInt)+' less interest, debt-free by '+lab(c.sIdx+hr.months)+'.')}
+ if(cust>0){var hr=simulate(D.list,base+cust,S.strategy,[]);if(hr.done&&bp.done) headline=h('div',{class:'note herobar',style:'margin-bottom:12px'},h('b',{},'With '+money(cust)+' more per month: '),(bp.months-hr.months>0?(bp.months-hr.months)+' month'+(bp.months-hr.months>1?'s':'')+' sooner':'same date')+' and '+money(bp.totInt-hr.totInt)+' less interest, debt-free by '+lab(c.sIdx+hr.months)+'.')}
  var sc=[['Current budget (your plan)',base,bp],['+ '+money(25)+' / month',base+25],['+ '+money(50)+' / month',base+50],['+ '+money(100)+' / month',base+100],['+ '+money(200)+' / month',base+200],['Custom: + '+money(cust)+' / month',base+cust],['With your lump sums',base,null,lp]];
  put('extra',h('div',{class:'card'},h('h2',{},'What if you paid more each month?'),h('p',{class:'hint'},'Based on your debts, with the '+S.strategy+' strategy. Your current plan already includes '+money(D.extra)+' extra per month; amounts below are added on top of it.'),headline,
   h('div',{style:'max-width:320px;margin-bottom:12px'},field('Your custom extra per month (optional)',inp('number',S.custom,function(e){S.custom=e.target.value;save()},{min:0,onchange:function(){render()}}),'Type any amount to compare it below.')),
@@ -633,7 +678,7 @@ function vLog(m){
    S.log.push({id:'p'+Date.now()+Math.random().toString(36).slice(2,6),date:f.date,debt:f.debt,amt:num(f.amt),type:f.type,notes:f.notes});save();toast('Payment added');render()}},'+ Add payment'))));
  var counted=c.ok?S.log.filter(function(p){return payMonth(p,c)>=1}):[];var tot=counted.reduce(function(a,p){return a+p.amt},0),reg=counted.filter(function(p){return p.type==='Regular'}).reduce(function(a,p){return a+p.amt},0);
  var last=counted.length?counted.map(function(p){return p.date}).sort().pop():null;
- m.appendChild(h('div',{class:'grid g4',style:'margin-bottom:14px'},kpi('Total logged',money(tot,2)),kpi('Regular',money(reg,2)),kpi('Extra',money(tot-reg,2)),kpi('Last payment',last?fd(last):'–',counted.length+' payments counted')));
+ m.appendChild(h('div',{class:'grid g4',style:'margin-bottom:14px'},kpi('Total logged',money(tot,2),'','hero'),kpi('Regular',money(reg,2)),kpi('Extra',money(tot-reg,2)),kpi('Last payment',last?fd(last):'–',counted.length+' payments counted')));
  // table
  var seen={};var sorted=S.log.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0});
  var rows=S.log.slice().sort(function(a,b){return a.date<b.date?-1:1}).map(function(p){var k=p.date+'|'+p.debt+'|'+p.amt;var dup=seen[k];seen[k]=1;return {p:p,dup:dup}});var dupMap={};rows.forEach(function(r){dupMap[r.p.id]=r.dup});
@@ -691,7 +736,7 @@ function vSettings(m){var ic=installCard();if(ic) m.appendChild(ic);
 function askSample(){if(hasData()&&!S.sample) confirmBox('Load example data?','This replaces what is currently in the app. Tip: download a backup first if you want to keep your entries.','Load example',loadSample);else loadSample()}
 function loadSample(){var cur=S.cur;S=blank();S.cur=cur;S.sample=true;var si0=idx(todayYM())-3;S.start=ymOf(si0);S.extra=150;S.strategy='Snowball';
  S.debts=[mk('Credit Card A',4200,22.9,105,5),mk('Credit Card B',1850,19.9,55,12),mk('Car Loan',9500,6.5,280,15),mk('Student Loan',14000,5,160,20),mk('Personal Loan',3000,11,95,25)];
- S.custom=75;S.target=ymOf(si0+36);S.lumps[0]={month:ymOf(si0+5),amount:1500,target:'Credit Card A'};S.lumps[1]={month:ymOf(si0+11),amount:800,target:''};
+ S.income=3400;S.fixed=1750;S.custom=75;S.target=ymOf(si0+36);S.lumps[0]={month:ymOf(si0+5),amount:1500,target:'Credit Card A'};S.lumps[1]={month:ymOf(si0+11),amount:800,target:''};
  cache=null;var c=calc();var offs=[20,35,60];
  for(var k=1;k<=3;k++){var mi=c.sIdx+k-1;var ds=ymOf(mi)+'-28';
   c.D.list.forEach(function(d){S.log.push({id:'s'+k+d.name,date:ds,debt:d.name,amt:d.min,type:'Regular',notes:k===1&&d.name==='Credit Card A'?'Example':''})});

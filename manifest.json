@@ -1,0 +1,16 @@
+{
+  "name": "Unlock Freedom: Debt Payoff App",
+  "short_name": "Unlock Freedom",
+  "description": "Debt payoff planner with Snowball and Avalanche strategies. Works offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F4F7",
+  "theme_color": "#1B2150",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

@@ -141,6 +141,7 @@ table td.calc{border-radius:0}
 
 input,select,textarea{border-width:1.5px}
 input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+.demobar{align-items:center;gap:10px;flex-wrap:wrap}.demobar a.btn{text-decoration:none;display:inline-flex;align-items:center}
 </style></head><body><div class="app" id="app"></div><noscript>This app needs JavaScript. Open it in a modern browser (Chrome, Safari, Edge or Firefox).</noscript><script>// Flight to Freedom engine (pure functions) — mirrors the spreadsheet rules
 const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
 function orderDebts(debts, strategy) {
@@ -688,9 +689,9 @@ function vSettings(m){var ic=installCard();if(ic) m.appendChild(ic);
 
 /* ---------- sample / reset ---------- */
 function askSample(){if(hasData()&&!S.sample) confirmBox('Load example data?','This replaces what is currently in the app. Tip: download a backup first if you want to keep your entries.','Load example',loadSample);else loadSample()}
-function loadSample(){var cur=S.cur;S=blank();S.cur=cur;S.sample=true;S.start='2027-01';S.extra=150;S.strategy='Snowball';
+function loadSample(){var cur=S.cur;S=blank();S.cur=cur;S.sample=true;var si0=idx(todayYM())-3;S.start=ymOf(si0);S.extra=150;S.strategy='Snowball';
  S.debts=[mk('Credit Card A',4200,22.9,105,5),mk('Credit Card B',1850,19.9,55,12),mk('Car Loan',9500,6.5,280,15),mk('Student Loan',14000,5,160,20),mk('Personal Loan',3000,11,95,25)];
- S.custom=75;S.target='2030-01';S.lumps[0]={month:'2027-06',amount:1500,target:'Credit Card A'};S.lumps[1]={month:'2027-12',amount:800,target:''};
+ S.custom=75;S.target=ymOf(si0+36);S.lumps[0]={month:ymOf(si0+5),amount:1500,target:'Credit Card A'};S.lumps[1]={month:ymOf(si0+11),amount:800,target:''};
  cache=null;var c=calc();var offs=[20,35,60];
  for(var k=1;k<=3;k++){var mi=c.sIdx+k-1;var ds=ymOf(mi)+'-28';
   c.D.list.forEach(function(d){S.log.push({id:'s'+k+d.name,date:ds,debt:d.name,amt:d.min,type:'Regular',notes:k===1&&d.name==='Credit Card A'?'Example':''})});
